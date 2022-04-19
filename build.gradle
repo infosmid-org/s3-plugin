@@ -28,7 +28,7 @@ plugins {
     id 'groovy'
     id 'java'
     id 'signing'
-    id 'org.ysb33r.gradletest' version '3.0.0-alpha.1'
+    id 'org.ysb33r.gradletest' version '3.0.0-alpha.2'
 }
 
 wrapper {
@@ -70,11 +70,11 @@ dependencies {
     testImplementation 'org.assertj:assertj-core:3.6.2'
     testCompileOnly gradleTestKit()
     testImplementation 'org.spockframework:spock-core:2.0-groovy-3.0'
-    gradleTest 'org.spockframework:spock-core:2.0-groovy-3.0'
-    gradleTest 'org.assertj:assertj-core:3.6.2'
-    gradleTest 'junit:junit:4.13'
-    gradleTest "com.amazonaws:aws-java-sdk-s3:$awsSdkVersion"
-    gradleTest 'commons-io:commons-io:2.8.0'
+//    gradleTest 'org.spockframework:spock-core:2.0-groovy-3.0'
+//    gradleTest 'org.assertj:assertj-core:3.6.2'
+//    gradleTest 'junit:junit:4.13'
+//    gradleTest "com.amazonaws:aws-java-sdk-s3:$awsSdkVersion"
+//    gradleTest 'commons-io:commons-io:2.8.0'
 }
 
 gradlePlugin {
@@ -93,7 +93,7 @@ pluginBundle {
         s3Plugin {
             displayName = 'S3 Gradle plugin'
             description = 'S3 Gradle plugin supporting upload and download'
-            tags = ['s3', 'gradle', 'plugin', 'aws']
+            tags = ['s3', 'aws', 'upload', 'download']
             version = project.version
         }
     }
@@ -111,7 +111,7 @@ artifacts {
 }
 
 gradleTest {
-    versions '7.1.1', '7.0.2'
+    versions '7.2', '7.1.1', '7.0.2'
     versions '6.8.3', '6.6.1', '6.5.1', '6.4.1', '6.3', '6.2.1', '6.1.1', '6.0.1'
     versions '5.4.1', '5.5.1', '5.6.4'
 

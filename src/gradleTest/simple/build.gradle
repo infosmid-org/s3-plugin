@@ -1,0 +1,11 @@
+apply plugin: 'io.jumpco.open.gradle.s3'
+
+io.jumpco.open.gradle.s3.S3BaseConfig.setTesting(true)
+
+s3 {
+    region = 'nowhere-north-9'
+}
+
+task runGradleTest {
+    dependsOn('s3Upload', 's3Download')
+}

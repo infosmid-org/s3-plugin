@@ -1,24 +1,35 @@
+/*
+    Copyright 2019-2021 Open JumpCO
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+    documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
+    and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all copies or substantial
+    portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+    THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+    CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+ */
 package io.jumpco.open.gradle.s3;
 
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.transfer.Transfer;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
-import java.io.File;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
+import java.io.File;
 
 public class S3Download extends DefaultTask {
-    @Internal
-    @Override
-    public String getGroup() {
-        return "s3";
-    }
-
     @Optional
     @Input
     protected String bucket;
@@ -30,12 +41,6 @@ public class S3Download extends DefaultTask {
     @Optional
     @Input
     protected String awsSecretAccessKey;
-
-    @Internal
-    S3Extension getExt() {
-        return getProject().getExtensions().findByType(S3Extension.class);
-    }
-
 
     @Optional
     @Input
@@ -55,6 +60,17 @@ public class S3Download extends DefaultTask {
 
     @Input
     private boolean skipError;
+
+    @Internal
+    @Override
+    public String getGroup() {
+        return "s3";
+    }
+
+    @Internal
+    S3Extension getExt() {
+        return getProject().getExtensions().findByType(S3Extension.class);
+    }
 
     public String getBucket() {
         if (bucket == null) {
@@ -122,11 +138,11 @@ public class S3Download extends DefaultTask {
     }
 
     public boolean isSkipError() {
-      return skipError;
+        return skipError;
     }
 
     public void setSkipError(final boolean skipError) {
-      this.skipError = skipError;
+        this.skipError = skipError;
     }
 
     @TaskAction
@@ -146,11 +162,12 @@ public class S3Download extends DefaultTask {
             getLogger().lifecycle("{}:directory:s3://{}/{} → {}/", getName(), getBucket(), keyPrefix, destDir);
             if (!S3BaseConfig.isTesting()) {
                 transfer = TransferManagerBuilder.standard().withS3Client(util.getS3Client()).build()
-                        .downloadDirectory(getBucket(), keyPrefix, getProject().file(destDir));
+                    .downloadDirectory(getBucket(), keyPrefix, getProject().file(destDir));
             }
         } else if (key != null && file != null) {
             if (keyPrefix != null || destDir != null) {
-                throw new GradleException("Invalid parameters: [keyPrefix, destDir] are not valid for S3 Download single file");
+                throw new GradleException(
+                    "Invalid parameters: [keyPrefix, destDir] are not valid for S3 Download single file");
             }
             getLogger().lifecycle("{}:file:s3://{}/{} → {}", getName(), getBucket(), key, file);
             if (!S3BaseConfig.isTesting()) {
@@ -169,7 +186,8 @@ public class S3Download extends DefaultTask {
                 }
             }
         } else {
-            throw new GradleException("Invalid parameters: one of [key, file] or [keyPrefix, destDir] pairs must be specified for S3 Download");
+            throw new GradleException(
+                "Invalid parameters: one of [key, file] or [keyPrefix, destDir] pairs must be specified for S3 Download");
         }
         if (!S3BaseConfig.isTesting()) {
             if (transfer == null && !skipError) {
