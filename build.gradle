@@ -40,7 +40,7 @@ group = 'io.jumpco.open'
 if (project.findProperty('buildVersion') == 'LOCAL_SNAPSHOT') {
     version = 'LOCAL_SNAPSHOT'
 } else {
-    version = '1.4.2'
+    version = '1.4.3'
 }
 
 targetCompatibility = JavaVersion.VERSION_1_8
