@@ -1,122 +1,210 @@
-/*
- * Copyright (c) 2020. Open JumpCO
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without
- * limitation the rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit
- * persons to whom the Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
-
 plugins {
     id 'java-gradle-plugin'
-    id 'com.gradle.plugin-publish' version '0.15.0'
     id 'maven-publish'
-    id 'idea'
-    id 'groovy'
-    id 'java'
-    id 'signing'
-    id 'org.ysb33r.gradletest' version '3.0.0-alpha.2'
+    alias(libs.plugins.maven.publish)
+    alias(libs.plugins.gradle.plugin.publish)
+    alias(libs.plugins.asciidoctorj)
 }
 
-wrapper {
-    gradleVersion = '7.1.1'
+group = 'org.infosmid.plugins'
+
+def getVersionFromFile() {
+    def versionFile = new File(rootProject.projectDir, 'version.txt')
+    return versionFile.text.trim()
 }
+version = providers.gradleProperty('releaseVersion').getOrNull() ?: getVersionFromFile()
+description = 'Upload files to and download files from Amazon S3'
+def projectName = 'Gradle S3 Plugin'
+def projectDescription = project.description
 
-group = 'io.jumpco.open'
-
-if (project.findProperty('buildVersion') == 'LOCAL_SNAPSHOT') {
-    version = 'LOCAL_SNAPSHOT'
-} else {
-    version = '1.4.3'
+repositories {
+    mavenCentral()
 }
-
-targetCompatibility = JavaVersion.VERSION_1_8
-sourceCompatibility = JavaVersion.VERSION_1_8
 
 jar {
     manifest {
         attributes([
                 'Manifest-Version'      : '1.0',
                 'Implementation-Version': project.version,
-                'Build-Tag'             : buildVersion
+                'Build-Tag'             : project.version
         ])
     }
 }
 
-repositories {
-    mavenCentral()
+dependencies {
+    implementation libs.aws.sdk.s3
+    implementation libs.commons.io
+
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+    testImplementation libs.assertj.core
+    testImplementation gradleTestKit()
 }
 
-dependencies {
-    compileOnly gradleApi()
-    implementation "com.amazonaws:aws-java-sdk-s3:$awsSdkVersion"
-    implementation 'commons-io:commons-io:2.8.0'
-
-    testCompileOnly localGroovy()
-    testImplementation 'junit:junit:4.13'
-    testImplementation 'org.assertj:assertj-core:3.6.2'
-    testCompileOnly gradleTestKit()
-    testImplementation 'org.spockframework:spock-core:2.0-groovy-3.0'
-//    gradleTest 'org.spockframework:spock-core:2.0-groovy-3.0'
-//    gradleTest 'org.assertj:assertj-core:3.6.2'
-//    gradleTest 'junit:junit:4.13'
-//    gradleTest "com.amazonaws:aws-java-sdk-s3:$awsSdkVersion"
-//    gradleTest 'commons-io:commons-io:2.8.0'
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
 }
 
 gradlePlugin {
+    website.set('https://github.com/infosmid-org/s3-plugin')
+    vcsUrl.set('https://github.com/infosmid-org/s3-plugin')
     plugins {
-        s3Plugin {
-            id = 'io.jumpco.open.gradle.s3'
-            implementationClass = 'io.jumpco.open.gradle.s3.S3Plugin'
+        register('org.infosmid.plugins.s3') {
+            implementationClass = 'org.infosmid.plugins.gradle.s3.S3Plugin'
+            displayName = projectName
+            description = projectDescription
+            tags.set(['s3', 'aws', 'upload', 'download'])
         }
     }
 }
 
-pluginBundle {
-    website = 'https://open.jumpco.io/projects/s3-plugin.html'
-    vcsUrl = 'https://github.com/open-jumpco/s3-plugin'
-    plugins {
-        s3Plugin {
-            displayName = 'S3 Gradle plugin'
-            description = 'S3 Gradle plugin supporting upload and download'
-            tags = ['s3', 'aws', 'upload', 'download']
-            version = project.version
+publishing {
+    repositories {
+        maven {
+            name = 'GitHubPackages'
+            url = uri("https://maven.pkg.github.com/infosmid-org/${rootProject.name}")
+            credentials {
+                username = providers.environmentVariable('GITHUB_ACTOR').getOrElse('')
+                password = providers.environmentVariable('GITHUB_TOKEN').getOrElse('')
+            }
         }
     }
 }
 
-
-task sourcesJar(type: Jar) {
-    from fileTree(dir: 'src/main/groovy')
-    archiveClassifier = 'sources'
-}
-
-artifacts {
-    archives jar
-    archives sourcesJar
-}
-
-gradleTest {
-    versions '7.2', '7.1.1', '7.0.2'
-    versions '6.8.3', '6.6.1', '6.5.1', '6.4.1', '6.3', '6.2.1', '6.1.1', '6.0.1'
-    versions '5.4.1', '5.5.1', '5.6.4'
-
-    beforeTest {
-        println "  ${it.name}"
+mavenPublishing {
+    publishToMavenCentral()
+    if (providers.gradleProperty('signingInMemoryKey').isPresent()) {
+        signAllPublications()
+    }
+    coordinates(project.group.toString(), rootProject.name, project.version.toString())
+    pom {
+        name = projectName
+        description = projectDescription
+        inceptionYear = '2020'
+        url = "https://github.com/infosmid-org/${rootProject.name}"
+        licenses {
+            license {
+                name = 'The MIT License'
+                url = 'https://opensource.org/licenses/MIT'
+                distribution = 'repo'
+            }
+        }
+        developers {
+            developer {
+                id = 'corneil'
+                name = 'Corneil du Plessis'
+                url = 'https://github.com/corneil'
+            }
+        }
+        scm {
+            url = "https://github.com/infosmid-org/${rootProject.name}"
+            connection = "scm:git:git://github.com/infosmid-org/${rootProject.name}.git"
+            developerConnection = "scm:git:ssh://git@github.com/infosmid-org/${rootProject.name}.git"
+        }
+        issueManagement {
+            system = 'GitHub'
+            url = "https://github.com/infosmid-org/${rootProject.name}/issues"
+        }
     }
 }
 
+// User guide is README.adoc included by src/docs/asciidoc/index.adoc
+asciidoc {
+    publications {
+        main {
+            sourceSet {
+                sourceDir = 'src/docs/asciidoc'
+                sources {
+                    include 'index.adoc'
+                }
+                resources {
+                    include '**/*.png'
+                    include '**/*.xml'
+                    include '**/*.js'
+                    include '**/*.css'
+                }
+                attributes {
+                    addAll 'toc': 'left',
+                        'idprefix': '',
+                        'idseparator': '-',
+                        'docinfo1': '',
+                        // Lets index.adoc link to the API docs: link:{api-docs}/index.html[API]
+                        'api-docs': 'api'
+                }
+                missingIncludesAreFatal()
+            }
+            output 'asciidoctorj', 'html'
+        }
+    }
+}
+
+// Properties read by gradle/site-docs.gradle (siteDocsZip); must be set before it is applied.
+// The plugin is published as org.infosmid.plugins:s3-plugin and the docs zip as
+// org.infosmid:s3-plugin-doc, the same as local-properties-plugin.
+ext {
+    siteDocsTitle       = projectName
+    siteDocsSummary     = projectDescription
+    siteDocsGuideTask   = 'asciidoctorHtml'
+    siteDocsApiTask     = 'javadoc'
+    siteDocsPublication = 'pluginMaven'
+    siteDocsArtifactId  = rootProject.name
+    siteDocsGroupId     = 'org.infosmid'
+    siteDocsTags        = ['Gradle', 'Plugin', 'S3', 'AWS']
+    siteDocsLicense     = 'MIT'
+    siteDocsSourceUrl   = "https://github.com/infosmid-org/${rootProject.name}".toString()
+}
+apply from: "$rootProject.projectDir/gradle/site-docs.gradle"
+
+tasks.register('updateReadmeVersion') {
+    group = 'documentation'
+    description = 'Modifies :project-version: attribute at the top of README.adoc'
+    def readmeFile = layout.projectDirectory.file('README.adoc').asFile
+    def projectVersion = providers.provider { project.version.toString() }
+    inputs.property('version', projectVersion)
+    outputs.file(readmeFile)
+    doLast {
+        if (!readmeFile.exists()) return
+        def content = readmeFile.text
+        def versionAttr = ":project-version: ${projectVersion.get()}"
+        if (content =~ /(?m)^:project-version:.*$/) {
+            readmeFile.text = content.replaceFirst(/(?m)^:project-version:.*$/, versionAttr)
+        }
+    }
+}
+
+asciidoctorHtml.dependsOn('updateReadmeVersion')
+
+tasks.register('docs') {
+    group = 'documentation'
+    dependsOn('asciidoctorHtml', 'javadoc', 'siteDocsZip')
+}
+
+// Add a source set for the functional test suite
+sourceSets {
+    functionalTest {
+    }
+}
+
+gradlePlugin.testSourceSets(sourceSets.functionalTest)
+configurations.functionalTestImplementation.extendsFrom(configurations.testImplementation)
+configurations.functionalTestRuntimeOnly.extendsFrom(configurations.testRuntimeOnly)
+
+// Add a task to run the functional tests
+tasks.register('functionalTest', Test) {
+    group 'verification'
+    testClassesDirs = sourceSets.functionalTest.output.classesDirs
+    classpath = sourceSets.functionalTest.runtimeClasspath
+    useJUnitPlatform()
+}
+
+tasks.named('check') {
+    // Run the functional tests as part of `check`
+    dependsOn(tasks.functionalTest)
+}
+
+tasks.named('test') {
+    // Use JUnit Platform for unit tests.
+    useJUnitPlatform()
+}

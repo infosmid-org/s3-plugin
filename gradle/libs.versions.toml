@@ -1,0 +1,21 @@
+[versions]
+asciidoctorPlugin = "5.0.3"
+junit = "5.13.4"
+gradle-plugin-publish = "2.2.1"
+maven-publish-plugin = "0.37.0"
+assertj = "3.27.7"
+aws-sdk = "1.11.858"
+commons-io = "2.8.0"
+
+[libraries]
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+aws-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version.ref = "aws-sdk" }
+commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
+
+[plugins]
+gradle-plugin-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-plugin-publish" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish-plugin" }
+asciidoctorj = { id = "org.asciidoctor.jvm", version.ref = "asciidoctorPlugin" }

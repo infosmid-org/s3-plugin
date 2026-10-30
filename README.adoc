@@ -1,0 +1,417 @@
+= Gradle S3 Plugin
+:project-version: 2.0.0
+:plugin-id: org.infosmid.plugins.s3
+:toc: left
+:toclevels: 3
+:icons: font
+:source-highlighter: highlight.js
+
+image:https://github.com/infosmid-org/s3-plugin/actions/workflows/snapshot.yml/badge.svg[Build Status,link=https://github.com/infosmid-org/s3-plugin/actions/workflows/snapshot.yml]
+image:https://img.shields.io/badge/install-plugin-brown.svg[Gradle Plugin Portal,link=https://plugins.gradle.org/plugin/{plugin-id}]
+image:https://img.shields.io/badge/License-MIT-blue.svg[License,link=LICENSE]
+
+A Gradle plugin that uploads files to Amazon S3 and downloads files from Amazon S3.
+
+This project is a fork of https://github.com/mygrocerydeals/gradle-s3-plugin[mygrocerydeals/gradle-s3-plugin].
+The original project is no longer maintained.
+This fork works with Gradle 6 and later, and it is written in Java.
+
+[IMPORTANT]
+====
+The plugin id and the Java package changed.
+The old id was `io.jumpco.open.gradle.s3`.
+The new id is `{plugin-id}`.
+See <<Migration>> for the steps to update your build.
+====
+
+== Build Configuration
+
+Apply the plugin in your build script.
+
+=== Groovy DSL (`build.gradle`)
+
+[source,groovy,subs="attributes+"]
+----
+plugins {
+    id '{plugin-id}' version '{project-version}'
+}
+----
+
+=== Kotlin DSL (`build.gradle.kts`)
+
+[source,kotlin,subs="attributes+"]
+----
+plugins {
+    id("{plugin-id}") version "{project-version}"
+}
+----
+
+=== Version Catalog (`gradle/libs.versions.toml`)
+
+Declare the plugin in the catalog:
+
+[source,toml,subs="attributes+"]
+----
+[versions]
+s3-plugin = "{project-version}"
+
+[plugins]
+infosmid-s3 = { id = "{plugin-id}", version.ref = "s3-plugin" }
+----
+
+Then use the generated `libs` accessor:
+
+[source,groovy]
+----
+plugins {
+    alias(libs.plugins.infosmid.s3)
+}
+----
+
+See the https://plugins.gradle.org/plugin/{plugin-id}[Gradle Plugin Portal page] for other versions.
+
+== Migration
+
+Use these steps to move from `io.jumpco.open.gradle.s3`:
+
+. Change the plugin id to `{plugin-id}`.
+. Change the package in task types from `io.jumpco.open.gradle.s3` to `org.infosmid.plugins.gradle.s3`.
+
+Example:
+
+[source,groovy]
+----
+// Before
+task myUpload(type: io.jumpco.open.gradle.s3.S3Upload) { ... }
+
+// After
+task myUpload(type: org.infosmid.gradle.s3.S3Upload) { ... }
+----
+
+The configuration blocks (`s3`, `s3Uploads` and `s3Downloads`) did not change.
+
+== Configuration
+
+All settings are in the `s3` extension.
+Each task can override them.
+
+=== Region
+
+Set `region` to the AWS region of your bucket.
+Use this setting when the authentication profile has no region, or to replace the region of the profile.
+
+[source,groovy]
+----
+s3 {
+    region = 'us-east-1'
+}
+----
+
+=== Authentication
+
+By default, the plugin uses the
+https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html[AWS default credentials provider chain].
+One way to supply credentials is to set the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+See the https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html[AWS documentation] for other methods.
+
+You can also set a profile, or an access key and a secret, in the `s3` extension.
+An access key and secret have priority over a profile.
+
+[source,groovy]
+----
+s3 {
+    profile = 'my-profile'
+    awsAccessKeyId = '12345678'
+    awsSecretAccessKey = 'my-secret'
+}
+----
+
+WARNING: Do not commit secrets to version control.
+Read them from a property or an environment variable instead.
+
+=== Default Bucket
+
+Set `bucket` to define a bucket for all tasks.
+A task can use a different bucket.
+
+[source,groovy]
+----
+s3 {
+    bucket = 'my.default.bucketname'
+}
+----
+
+== Usage
+
+You can define jobs in a configuration block, or you can create tasks of a specific type.
+
+=== Jobs
+
+A job in `s3Uploads` or `s3Downloads` creates a task.
+The task name is the job name plus a suffix:
+
+* The job `jobName` in `s3Uploads` creates the task `jobNameUploadTask`.
+* The job `dlJob` in `s3Downloads` creates the task `dlJobDownloadTask`.
+
+[source,groovy]
+----
+s3Uploads {
+    jobName {
+        key = 'target-filename'
+        file = 'source-filename'
+    }
+}
+
+s3Downloads {
+    dlJob {
+        keyPrefix = 'folder'
+        destDir = 'targetDir'
+    }
+}
+----
+
+=== Task Types
+
+[source,groovy]
+----
+import org.infosmid.gradle.s3.S3Upload
+import org.infosmid.gradle.s3.S3Download
+
+task myDownload(type: S3Download) {
+    keyPrefix = 'folder'
+    destDir = 'targetDir'
+}
+
+task myUpload(type: S3Upload) {
+    key = 'target-filename'
+    file = 'source-filename'
+    compareContent = true
+}
+
+task myUploadFiles(type: S3Upload) {
+    keyPrefix = 'target-folder'
+    files = fileTree('my-folder').matching {
+        include('**/*.zip')
+    }
+    compareContent = false
+}
+----
+
+== Uploads
+
+An upload task has three modes:
+
+* Single file upload
+* Directory upload, including all subdirectories
+* `FileCollection` upload
+
+=== Common Properties
+
+[cols="2,1,4", options="header"]
+|===
+| Property | Default | Description
+
+| `bucket`
+| `s3.bucket`
+| S3 bucket to use.
+
+| `awsAccessKeyId`
+| `s3.awsAccessKeyId`
+| AWS access key.
+
+| `awsSecretAccessKey`
+| `s3.awsSecretAccessKey`
+| AWS secret access key.
+
+| `overwrite`
+| `false`
+| If `true`, the task replaces an S3 object that already exists.
+
+| `compareContent`
+| `false`
+| If `true`, the task downloads the S3 object and compares it with the local file.
+The task uploads the file only when the content is different.
+
+| `skipError`
+| `false`
+| If `true`, the task does not fail when an object is missing.
+
+| `batchSize`
+| `100`
+| Number of files to upload in one batch. A larger batch can make the upload faster.
+|===
+
+=== Single File
+
+[cols="1,4", options="header"]
+|===
+| Property | Description
+
+| `key`
+| Key of the S3 object to create.
+
+| `file`
+| Path of the file to upload.
+|===
+
+By default, the task does not replace an S3 object that already exists.
+Set `overwrite` to `true` to replace it.
+
+=== Directory
+
+[cols="1,4", options="header"]
+|===
+| Property | Description
+
+| `keyPrefix`
+| S3 prefix under which the task creates the uploaded objects.
+
+| `sourceDir`
+| Local directory to upload.
+|===
+
+A directory upload always replaces existing objects under the prefix.
+
+=== File Collection
+
+[cols="1,4", options="header"]
+|===
+| Property | Description
+
+| `keyPrefix`
+| S3 prefix under which the task creates the uploaded objects.
+
+| `files`
+| A `FileCollection`. Create it with `files()` or `fileTree()`.
+|===
+
+== Downloads
+
+A download task has two modes:
+
+* Single file download
+* Recursive download
+
+=== Common Properties
+
+[cols="2,1,4", options="header"]
+|===
+| Property | Default | Description
+
+| `bucket`
+| `s3.bucket`
+| S3 bucket to use.
+
+| `awsAccessKeyId`
+| `s3.awsAccessKeyId`
+| AWS access key.
+
+| `awsSecretAccessKey`
+| `s3.awsSecretAccessKey`
+| AWS secret access key.
+|===
+
+=== Single File
+
+[cols="1,4", options="header"]
+|===
+| Property | Description
+
+| `key`
+| Key of the S3 object to download.
+
+| `file`
+| Local path where the task saves the file.
+|===
+
+=== Recursive
+
+[cols="1,4", options="header"]
+|===
+| Property | Description
+
+| `keyPrefix`
+| S3 prefix of the objects to download.
+
+| `destDir`
+| Local directory where the task saves the objects.
+|===
+
+A recursive download keeps the full `keyPrefix` in the local path.
+For example, a bucket has these object keys:
+
+----
+top/foo/bar
+top/README
+----
+
+This download:
+
+[source,groovy]
+----
+s3Downloads {
+    downloadRecursive {
+        keyPrefix = 'top/foo/'
+        destDir = 'local-dir'
+    }
+}
+----
+
+creates this local tree:
+
+----
+local-dir/
+└── top
+    └── foo
+        └── bar
+----
+
+The task downloads only the objects under `top/foo`, but it keeps the full S3 path below `destDir`.
+The command `aws s3 cp --recursive` behaves in a different way: it removes the prefix.
+
+To remove the prefix, use a https://docs.gradle.org/current/dsl/org.gradle.api.tasks.Copy.html[Copy] task after the download:
+
+[source,groovy]
+----
+def localTree = 'path/to/some/location'
+
+task downloadRecursive(type: org.infosmid.gradle.s3.S3Download) {
+    bucket = 's3-bucket-name'
+    keyPrefix = "${localTree}"
+    destDir = "${buildDir}/download-root"
+}
+
+// Copy the downloaded tree to a new location and remove the keyPrefix.
+task copyDownload(type: Copy, dependsOn: downloadRecursive) {
+    from "${buildDir}/download-root/${localTree}"
+    into "${buildDir}/pruned-tree"
+}
+----
+
+== Progress Reporting
+
+A download task reports progress in percent at the Gradle `INFO` log level.
+Run Gradle with the `-i` option to see it.
+
+== Build the Project
+
+Use Java 17 or later.
+
+[source,shell]
+----
+./gradlew build
+----
+
+This command compiles the plugin and runs the unit tests and the functional tests.
+The functional tests do not connect to AWS.
+
+To build the documentation and the API docs, run:
+
+[source,shell]
+----
+./gradlew docs
+----
+
+== License
+
+Released under the link:LICENSE[MIT License].
