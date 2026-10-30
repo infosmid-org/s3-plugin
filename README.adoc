@@ -14,15 +14,8 @@ A Gradle plugin that uploads files to Amazon S3 and downloads files from Amazon 
 
 This project is a fork of https://github.com/mygrocerydeals/gradle-s3-plugin[mygrocerydeals/gradle-s3-plugin].
 The original project is no longer maintained.
-This fork works with Gradle 6 and later, and it is written in Java.
 
-[IMPORTANT]
-====
-The plugin id and the Java package changed.
-The old id was `io.jumpco.open.gradle.s3`.
-The new id is `{plugin-id}`.
-See <<Migration>> for the steps to update your build.
-====
+This fork works with Gradle 9 and later, and it is written in Java.
 
 == Build Configuration
 
@@ -69,26 +62,6 @@ plugins {
 ----
 
 See the https://plugins.gradle.org/plugin/{plugin-id}[Gradle Plugin Portal page] for other versions.
-
-== Migration
-
-Use these steps to move from `io.jumpco.open.gradle.s3`:
-
-. Change the plugin id to `{plugin-id}`.
-. Change the package in task types from `io.jumpco.open.gradle.s3` to `org.infosmid.plugins.gradle.s3`.
-
-Example:
-
-[source,groovy]
-----
-// Before
-task myUpload(type: io.jumpco.open.gradle.s3.S3Upload) { ... }
-
-// After
-task myUpload(type: org.infosmid.gradle.s3.S3Upload) { ... }
-----
-
-The configuration blocks (`s3`, `s3Uploads` and `s3Downloads`) did not change.
 
 == Configuration
 
